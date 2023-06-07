@@ -1421,6 +1421,138 @@ app.post("/api/hapus_berobat", (req, res) => {
 });
 
 //Pengguna
+app.post("/api/login_pengguna", (req, res) => {
+  console.log("Login Pengguna");
+  let data = {
+    token: req.body.token,
+    namapengguna: req.body.namapengguna,
+    sandipengguna: req.body.sandipengguna,
+    jam_request: PublikFungsi.WaktuSekarang("DD-MM-YYYY HH:mm:ss") + " Wib.",
+  };
+  let sql;
+  let nama_tabel = 'tb_pengguna';
+  let nama_field = '*';
+  let kondisi = '';
+  kondisi+= 'WHERE namapengguna = "' + data.namapengguna + '" ';
+  kondisi+= 'AND sandipengguna = "' + data.sandipengguna + '" ';
+  kondisi+= 'AND status_akun = "Aktif"';
+  try {
+    sql = PublikFungsi.CariDataDebug(
+      nama_tabel,
+      nama_field,
+      kondisi
+    );
+  } catch (error) {
+    sql = PublikFungsi.CariDataDebug(
+      nama_tabel,
+      nama_field,
+      kondisi
+    );
+    console.log('Erorr Sistem : ' + error);
+  }
+  res.setHeader("Content-Type", "application/json");
+  if (data["token"]) {
+    if (Token.LoginToken(data["token"])) {
+      hendelKoneksi();
+      conn.query(sql, data, (err, results) => {
+        if (err) {
+          res.send(
+            JSON.stringify({
+              status: 200,
+              pesan: "Error Code. Login Pengguna",
+              status_tampil: false,
+              tokennyaa: "Hidden",
+              error: err,
+              jumlah_data: 0,
+              data: results,
+            })
+          );
+          conn.end();
+        } else {
+          if (results.length > 0) {
+            let tgl_sekarang = PublikFungsi.WaktuSekarang("YYYY-MM-DD HH:mm:ss");
+            let sql_update = '';
+            nama_field = 'terakhir_login = "' + tgl_sekarang + '"';
+            kondisi = 'namapengguna = "' + data.namapengguna + '" ';
+            sql_update = PublikFungsi.UbahDebug(
+              nama_tabel,
+              nama_field,
+              kondisi
+            );
+            conn.query(sql_update, data, (err_update, results_update) => {
+              if (err_update) {
+                res.send(
+                  JSON.stringify({
+                    status: 200,
+                    pesan: "Error Code. Update Last Login",
+                    status_tampil: false,
+                    tokennyaa: "Hidden",
+                    error: err_update,
+                    jumlah_data: 0,
+                    data: results_update,
+                  })
+                );
+                conn.end();
+              } else {
+                res.send(
+                  JSON.stringify({
+                    status: 200,
+                    pesan: "Login Berhasil.",
+                    status_tampil: true,
+                    tokennyaa: "Hidden",
+                    error: null,
+                    jumlah_data: results.length,
+                    data: results,
+                  })
+                );
+                conn.end();
+              }
+            });
+          } else {
+            res.send(
+              JSON.stringify({
+                status: 200,
+                pesan: "Login Gagal.",
+                status_tampil: false,
+                tokennyaa: "Hidden",
+                error: null,
+                jumlah_data: results.length,
+                data: results,
+              })
+            );
+          }
+        }
+      });
+      console.log("Putuskan MySQL/MariaDB...");
+    } else {
+      res.send(
+        JSON.stringify({
+          status: 200,
+          pesan: "Token Tidak Sesuai !",
+          status_tampil: false,
+          tokennyaa: data["token"],
+          error: null,
+          jumlah_data: 0,
+          data: [],
+        })
+      );
+    }
+  } else {
+    res.send(
+      JSON.stringify({
+        status: 200,
+        pesan: "Inputan Kurang !",
+        status_tampil: false,
+        tokennyaa: data["token"],
+        error: null,
+        jumlah_data: 0,
+        data: [],
+      })
+    );
+  }
+  console.log(data);
+});
+
 app.post("/api/tampil_pengguna", (req, res) => {
   console.log("Tampil Pengguna");
   let data = {
@@ -1537,15 +1669,17 @@ app.post("/api/tambah_pengguna", (req, res) => {
     namapengguna : req.body.namapengguna,
     sandipengguna : req.body.sandipengguna,
     level_akses : req.body.level_akses,
+    status_akun : req.body.status_akun,
     jam_request: PublikFungsi.WaktuSekarang("DD-MM-YYYY HH:mm:ss") + " Wib.",
   };
   let tgl_sekarang = PublikFungsi.WaktuSekarang("YYYY-MM-DD HH:mm:ss");
   let sql;
   let nama_tabel = 'tb_pengguna';
-  let nama_field = 'namapengguna,sandipengguna,level_akses,tgl_create';
+  let nama_field = 'namapengguna,sandipengguna,level_akses,status_akun,tgl_create';
   let value_field = '"' + data.namapengguna + '",';
   value_field += '"' + data.sandipengguna + '",';
   value_field += '"' + data.level_akses + '",';
+  value_field += '"' + data.status_akun + '",';
   value_field += '"' + tgl_sekarang + '"';
 
   try {
@@ -1641,6 +1775,7 @@ app.post("/api/ubah_pengguna", (req, res) => {
     namapengguna : req.body.namapengguna,
     sandipengguna : req.body.sandipengguna,
     level_akses : req.body.level_akses,
+    status_akun : req.body.status_akun,
     jam_request: PublikFungsi.WaktuSekarang("DD-MM-YYYY HH:mm:ss") + " Wib.",
   };
   let tgl_sekarang = PublikFungsi.WaktuSekarang("YYYY-MM-DD HH:mm:ss");
@@ -1649,6 +1784,7 @@ app.post("/api/ubah_pengguna", (req, res) => {
 
   let nama_field = 'sandipengguna = "' + data.sandipengguna + '",';
   nama_field += 'level_akses = "' + data.level_akses + '",';
+  nama_field += 'status_akun = "' + data.status_akun + '",';
   nama_field += 'tgl_ubah = "' + tgl_sekarang + '"';
 
   let kondisi = 'namapengguna = "' + data.namapengguna + '"';
