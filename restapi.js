@@ -570,19 +570,34 @@ app.post("/api/tampil_staff", (req, res) => {
   let data = {
     token: req.body.token,
     input_cari: req.body.input_cari,
+    jabatanstaff: req.body.jabatanstaff,
     jam_request: PublikFungsi.WaktuSekarang("DD-MM-YYYY HH:mm:ss") + " Wib.",
   };
   let sql;
   let nama_tabel = 'tb_staff';
   let nama_field = '*';
   let kondisi = '';
-  if (data.input_cari) {
-    kondisi+= 'WHERE namastaff LIKE "%' + data.input_cari + '%" ';
-    kondisi+= 'OR jabatanstaff LIKE "%' + data.input_cari + '%" ';
-    kondisi+= 'ORDER BY kodestaff ASC';
+  if (data.input_cari) {    
+    if (data.jabatanstaff){
+      kondisi += 'WHERE jabatanstaff = "' + data.jabatanstaff + '" ';
+      kondisi += 'AND (namastaff LIKE "%' + data.input_cari + '%" ';
+      kondisi += 'OR jabatanstaff LIKE "%' + data.input_cari + '%") ';
+      kondisi += 'ORDER BY namastaff ASC';
+    }
+    else{
+      kondisi += 'WHERE namastaff LIKE "%' + data.input_cari + '%" ';
+      kondisi += 'OR jabatanstaff LIKE "%' + data.input_cari + '%" ';
+      kondisi += 'ORDER BY kodestaff ASC';
+    }
   }
   else{
-    kondisi = 'ORDER BY kodestaff ASC';
+    if (data.jabatanstaff){
+      kondisi += 'WHERE jabatanstaff = "' + data.jabatanstaff + '" ';
+      kondisi += 'ORDER BY namastaff ASC';
+    }
+    else{
+      kondisi = 'ORDER BY kodestaff ASC';
+    }
   }
   try {
     sql = PublikFungsi.CariDataDebug(
@@ -991,9 +1006,11 @@ app.post("/api/tampil_berobat", (req, res) => {
     jam_request: PublikFungsi.WaktuSekarang("DD-MM-YYYY HH:mm:ss") + " Wib.",
   };
   let sql;
-  let nama_tabel = 'tb_berobat a';
-  nama_tabel += 'LEFT JOIN tb_pasien b ON a.nomr = b.nomr';
-  let nama_field = 'a.*,b.namapasien,b.jeniskelamin,b.tgllahir';
+  let nama_tabel = 'tb_berobat a ';
+  nama_tabel += 'LEFT JOIN tb_pasien b ON a.nomr = b.nomr ';
+  nama_tabel += 'LEFT JOIN tb_skrinning c ON a.kdberobat = c.kdberobat ';
+  let nama_field = 'a.*,b.namapasien,b.jeniskelamin,b.tgllahir,b.alamat,';
+  nama_field += 'b.nohp,c.tensi,c.beratbadan,c.tinggibadan';
   let kondisi = '';
   if (data.input_cari) {
     kondisi+= 'WHERE nomr LIKE "%' + data.input_cari + '%" ';
@@ -1098,13 +1115,18 @@ app.post("/api/tambah_berobat", (req, res) => {
   let data = {
     token: req.body.token,
     nomr : req.body.nomr,
+    kodestaff : req.body.kodestaff,
     tglberobat : req.body.tglberobat,
     statusberobat : req.body.statusberobat,
+    tensi : req.body.tensi,
+    beratbadan : req.body.beratbadan,
+    tinggibadan : req.body.tinggibadan,
     namapengguna : req.body.namapengguna,
     jam_request: PublikFungsi.WaktuSekarang("DD-MM-YYYY HH:mm:ss") + " Wib.",
   };
   let sql;
   var nama_tabel = 'tb_berobat';
+  var tgl_sekarang = PublikFungsi.WaktuSekarang("YYYY-MM-DD HH:mm:ss")
   
   res.setHeader("Content-Type", "application/json");
   if (data["token"]) {
@@ -1124,12 +1146,14 @@ app.post("/api/tambah_berobat", (req, res) => {
             })
           );
         } else {
-          let kdberobat = results_otomatis[0].id;
+          let kdberobat = ((results_otomatis[0].id === 0) || (results_otomatis[0].id === null)) ? 1 : results_otomatis[0].id;
 
-          let nama_field = 'kdberobat,nomr,tglberobat,statusberobat,namapengguna';
-          let value_field = '"' + kdberobat + '",';
+          let nama_field = 'kdberobat,nomr,kodestaff,tglberobat,';
+          nama_field += 'statusberobat,namapengguna';
+          let value_field = '' + kdberobat + ',';
           value_field += '"' + data.nomr + '",';
-          value_field += '"' + data.tglberobat + '",';
+          value_field += '"' + data.kodestaff + '",';
+          value_field += '"' + tgl_sekarang + '",';
           value_field += '"' + data.statusberobat + '",';
           value_field += '"' + data.namapengguna + '"';
 
@@ -1163,16 +1187,46 @@ app.post("/api/tambah_berobat", (req, res) => {
             } else {
               let affectedRows = results.affectedRows;
               if (affectedRows = 1) {
-                res.send(
-                  JSON.stringify({
-                    status: 200,
-                    pesan: "Tambah Berobat Sukses.",
-                    status_tambah: true,
-                    tokennyaa: "Hidden",
-                    error: null,
-                    data: results,
-                  })
+                let f_skrinning = 'kdberobat,tensi,beratbadan,tinggibadan,';
+                f_skrinning += 'namapengguna';
+                let v_skrinning = '"' + kdberobat + '",';
+                v_skrinning += '"' + data.tensi + '",';
+                v_skrinning += '"' + data.beratbadan + '",';
+                v_skrinning += '"' + data.tinggibadan + '",';
+                v_skrinning += '"' + data.namapengguna + '"';
+                let sqlAddSkrinning = PublikFungsi.SimpanSingle(
+                  'tb_skrinning',
+                  f_skrinning,
+                  v_skrinning
                 );
+                conn.query(sqlAddSkrinning, data, (errSkrinning, resultsSkrinning) => {
+                  if (errSkrinning) {
+                    res.send(
+                      JSON.stringify({
+                        status: 200,
+                        pesan: "Error Code Tambah Skrinning.",
+                        status_tambah: false,
+                        tokennyaa: "Hidden",
+                        error: errSkrinning,
+                        data: resultsSkrinning,
+                      })
+                    );
+                    conn.end();
+                  }
+                  else {
+                    res.send(
+                      JSON.stringify({
+                        status: 200,
+                        pesan: "Tambah Berobat Sukses.",
+                        status_tambah: true,
+                        tokennyaa: "Hidden",
+                        error: null,
+                        data: results,
+                      })
+                    );
+                    conn.end();
+                  }
+                });
               } else {
                 res.send(
                   JSON.stringify({
@@ -1224,6 +1278,7 @@ app.post("/api/ubah_berobat", (req, res) => {
     token: req.body.token,
     kdberobat : req.body.kdberobat,
     nomr : req.body.nomr,
+    kodestaff : req.body.kodestaff,
     tglberobat : req.body.tglberobat,
     statusberobat : req.body.statusberobat,
     namapengguna : req.body.namapengguna,
@@ -1233,7 +1288,8 @@ app.post("/api/ubah_berobat", (req, res) => {
   let nama_tabel = 'tb_berobat';
 
   let nama_field = 'nomr = "' + data.nomr + '",';
-  nama_field += 'tglberobat = "' + data.tglberobat + '",';
+  nama_field += 'nomr = "' + data.nomr + '",';
+  nama_field += 'kodestaff = "' + data.kodestaff + '",';
   nama_field += 'statusberobat = "' + data.statusberobat + '",';
   nama_field += 'namapengguna = "' + data.namapengguna + '"';
 
@@ -1367,16 +1423,38 @@ app.post("/api/hapus_berobat", (req, res) => {
         } else {
           let affectedRows = results.affectedRows;
           if (affectedRows = 1) {
-            res.send(
-              JSON.stringify({
-                status: 200,
-                pesan: "Hapus Berobat Sukses.",
-                status_hapus: true,
-                tokennyaa: "Hidden",
-                error: null,
-                data: results,
-              })
+            sqlHapusKrinning = PublikFungsi.Hapus(
+              'tb_skrinning',
+              'kdberobat = "' + data.kdberobat + '"'
             );
+            conn.query(sqlHapusKrinning, data, (errSkrinning, resultsSkrinning) => {
+              if (errSkrinning) {
+                res.send(
+                  JSON.stringify({
+                    status: 200,
+                    pesan: "Error Code. Hapus Skrinning.",
+                    status_hapus: false,
+                    tokennyaa: "Hidden",
+                    error: errSkrinning,
+                    data: resultsSkrinning,
+                  })
+                );
+                conn.end();
+              }
+              else{
+                res.send(
+                  JSON.stringify({
+                    status: 200,
+                    pesan: "Hapus Berobat Sukses.",
+                    status_hapus: true,
+                    tokennyaa: "Hidden",
+                    error: null,
+                    data: results,
+                  })
+                );
+                conn.end();
+              }
+            });
           } else {
             res.send(
               JSON.stringify({
@@ -1388,10 +1466,10 @@ app.post("/api/hapus_berobat", (req, res) => {
                 data: results,
               })
             );
+            conn.end();
           }
         }
       });
-      conn.end();
       console.log("Putuskan MySQL/MariaDB...");
     } else {
       res.send(
