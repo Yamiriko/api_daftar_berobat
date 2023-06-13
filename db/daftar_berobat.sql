@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Waktu pembuatan: 11 Jun 2023 pada 16.36
+-- Waktu pembuatan: 13 Jun 2023 pada 01.14
 -- Versi server: 10.1.22-MariaDB
 -- Versi PHP: 7.3.33
 
@@ -111,7 +111,7 @@ CREATE TABLE `tb_pengguna` (
 --
 
 INSERT INTO `tb_pengguna` (`namapengguna`, `sandipengguna`, `level_akses`, `status_akun`, `tgl_create`, `tgl_ubah`, `terakhir_login`) VALUES
-('JeanRiko', 'riko', 'Admin', 'Aktif', '2023-06-07 16:07:30', '2023-06-07 16:16:49', '2023-06-11 19:37:02'),
+('JeanRiko', 'riko', 'Admin', 'Aktif', '2023-06-07 16:07:30', '2023-06-07 16:16:49', '2023-06-13 07:15:22'),
 ('aaaaaaaaa', 'aaaaaaa', 'Perawat', 'Suspend', '2023-06-09 08:16:05', NULL, NULL),
 ('juki', 'juki', 'Dokter', 'Aktif', '2023-06-11 19:43:13', NULL, NULL);
 

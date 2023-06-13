@@ -1217,7 +1217,7 @@ app.post("/api/tambah_berobat", (req, res) => {
                     res.send(
                       JSON.stringify({
                         status: 200,
-                        pesan: "Tambah Berobat Sukses.",
+                        pesan: "Tambah Berobat dan Skrinning Sukses.",
                         status_tambah: true,
                         tokennyaa: "Hidden",
                         error: null,
@@ -1423,7 +1423,7 @@ app.post("/api/hapus_berobat", (req, res) => {
         } else {
           let affectedRows = results.affectedRows;
           if (affectedRows = 1) {
-            sqlHapusKrinning = PublikFungsi.Hapus(
+            let sqlHapusKrinning = PublikFungsi.Hapus(
               'tb_skrinning',
               'kdberobat = "' + data.kdberobat + '"'
             );
@@ -1442,17 +1442,38 @@ app.post("/api/hapus_berobat", (req, res) => {
                 conn.end();
               }
               else{
-                res.send(
-                  JSON.stringify({
-                    status: 200,
-                    pesan: "Hapus Berobat Sukses.",
-                    status_hapus: true,
-                    tokennyaa: "Hidden",
-                    error: null,
-                    data: results,
-                  })
+                let sqlHapusDiagnosa = PublikFungsi.Hapus(
+                  'tb_diagnosa',
+                  'kdberobat = "' + data.kdberobat + '"'
                 );
-                conn.end();
+                conn.query(sqlHapusDiagnosa, data, (errDiagnosa, resultsDiagnosa) => {
+                  if (errDiagnosa){
+                    res.send(
+                      JSON.stringify({
+                        status: 200,
+                        pesan: "Error Code. Hapus Diagnosa.",
+                        status_hapus: false,
+                        tokennyaa: "Hidden",
+                        error: errDiagnosa,
+                        data: resultsDiagnosa,
+                      })
+                    );
+                    conn.end();
+                  }
+                  else{
+                    res.send(
+                      JSON.stringify({
+                        status: 200,
+                        pesan: "Hapus Berobat,Skrinning,Diagnosa Sukses.",
+                        status_hapus: true,
+                        tokennyaa: "Hidden",
+                        error: null,
+                        data: results,
+                      })
+                    );
+                    conn.end();
+                  }
+                });
               }
             });
           } else {
@@ -2173,6 +2194,8 @@ app.put("/api/tambah_data_gbr", (req, res) => {
   }
   console.log(data);
 });
+
+//Diagnosa. Buat 4 fungsi untuk tabel diagnosa : Tampil dan CRUD
 
 app.put("/api/tambah_data_gbr_2", (req, res) => {
   let data = {
